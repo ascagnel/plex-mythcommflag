@@ -115,7 +115,6 @@ def mythcommflag_run():
     logger.info("Merging files with command %s", concat_command)
     os.system(concat_command)
     os.system('rm output*.mpg')
-    os.system('rm tempfile.mpg')
     return 
 
 if __name__ == "__main__":
