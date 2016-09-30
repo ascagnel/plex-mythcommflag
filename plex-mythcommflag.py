@@ -47,16 +47,18 @@ def mythcommflag_run():
 
     logger.info(os.path.abspath(args.source))
 
+    temp_prefix = '/tmp/plex-mythcommflag-' + str(os.getpid())
+    logger.debug('tmp folder prefix path: %s', temp_prefix)
     mythcommflag_command = 'mythcommflag -f \"'
     mythcommflag_command += args.source
     mythcommflag_command += '\" --outputmethod essentials'
-    mythcommflag_command += ' --outputfile .mythExCommflag.edl'
+    mythcommflag_command += ' --outputfile ' + temp_prefix + '-cutlist.edl'
     mythcommflag_command += ' --skipdb --quiet'
     mythcommflag_command += ' -v'
     logger.info("mythcommflag: [%s]", mythcommflag_command)
     os.system(mythcommflag_command)
     logger.info("mythcommflag finished")
-    cutlist = open('.mythExCommflag.edl', 'r')
+    cutlist = open(temp_prefix + '-cutlist.edl', 'r')
     cutpoints = []
     pointtypes = []
     starts_with_commercial = False
@@ -95,26 +97,27 @@ def mythcommflag_run():
                      str(duration))
         if duration is 0:
             avconv_command = ('avconv -v 16 -i \"' + args.source + '\" -ss ' +
-                              str(startpoint) + ' -c copy output' +
-                              str(segments) + '.mpg')
+                              str(startpoint) + ' -c copy ' + temp_prefix + '-output-' +
+                              str(segments) + '.mkv')
         else:
             avconv_command = ('avconv -v 16 -i \"' + args.source + '\" -ss ' +
                               str(startpoint) + ' -t ' + str(duration) +
-                              ' -c copy output' + str(segments) + '.mpg')
+                              ' -c copy ' + temp_prefix + '-output-' + str(segments) + '.mkv')
         logger.info("Running avconv command line {%s}", avconv_command)
         os.system(avconv_command)
         segments = segments + 1
     current_segment = 0
     concat_command = 'cat'
     while current_segment < segments:
-        concat_command += ' output' + str(current_segment) + '.mpg'
+        concat_command += ' ' + temp_prefix + '-output-' + str(current_segment) + '.mkv'
         current_segment = current_segment + 1
-    concat_command += ' >> \"'
-    concat_command += args.source
-    concat_command += '\"'
+    concat_command += ' >> ' + temp_prefix + '-tempfile.mkv'
     logger.info("Merging files with command %s", concat_command)
     os.system(concat_command)
-    os.system('rm output*.mpg')
+    logger.info("Moving file into place")
+    os.system("mv " + temp_prefix + "-tempfile.mkv \"" + args.source + "\"")
+    logger.info("Cleaning up temp directory")
+    os.system('rm ' + temp_prefix + '-*')
     return 
 
 if __name__ == "__main__":
